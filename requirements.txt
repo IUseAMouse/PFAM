@@ -1,0 +1,7 @@
+dvc
+hydra-core
+scikit-learn
+pandas
+numpy
+torch
+transformers
