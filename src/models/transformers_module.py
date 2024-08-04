@@ -1,14 +1,29 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 class TransformersLightningModule(pl.LightningModule):
     def __init__(self, model_name, num_labels, class_weights):
         super(TransformersLightningModule, self).__init__()
+        self.lora_config = lora_config = LoraConfig(
+            r=8,
+            lora_alpha=32,
+            target_modules=["query", "key", "value"],
+            lora_dropout=0.1,
+            bias="none",
+            task_type="SEQ_CLS"  
+        )
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+  
+        # Prepare the model for quantized training
+        self.model = prepare_model_for_kbit_training(self.model)
+        self.model = get_peft_model(self.model, lora_config)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.learning_rate = 0.001
 
     def forward(self, input_ids, attention_mask, labels=None):
         return self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)

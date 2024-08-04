@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
 
 class LinearClassifier(pl.LightningModule):
