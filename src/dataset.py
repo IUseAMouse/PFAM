@@ -2,7 +2,8 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer
-from datasets import Dataset
+from torch.utils.data import DataLoader, Dataset
+from sklearn.feature_extraction.text import CountVectorizer
 
 class ProteinDataModule(pl.LightningDataModule):
     def __init__(self, train_df, val_df, test_df, bow = False, batch_size=32, max_length=128):
@@ -40,6 +41,7 @@ class ProteinDataset(Dataset):
             self.bow = bow
         else:
             self.tokenizer = AutoTokenizer.from_pretrained('facebook/esm2_t6_8M_UR50D')
+            self.bow = None
 
     def __len__(self):
         return len(self.data)
@@ -47,7 +49,7 @@ class ProteinDataset(Dataset):
     def __getitem__(self, idx):
         sequence = self.data.iloc[idx]['sequence']
         label = self.data.iloc[idx]['class_encoded']
-        if self.bow:
+        if self.bow == True:
             inputs = self.vectorizer.transform([sequence]).toarray()
             inputs = torch.tensor(inputs, dtype=torch.float32).squeeze()
         else:
