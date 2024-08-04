@@ -6,7 +6,7 @@ from src.models.linear_classifier import LinearClassifier
 from src.models.transformers_module import TransformersLightningModule
 
 
-def train(baseline=False, custom=False, fine_tune=True):
+def train(model_name):
     # Load and preprocess the data
     train_data = pd.read_csv('/content/drive/MyDrive/PFAM - Copie/data/preprocessed/train.csv')
     test_data = pd.read_csv('/content/drive/MyDrive/PFAM - Copie/data/preprocessed/test.csv')
@@ -34,16 +34,16 @@ def train(baseline=False, custom=False, fine_tune=True):
         gradient_clip_val=1.0 # Ensure gradient clipping to avoid exploding gradients
     )
 
-    if baseline:
+    if model_name == 'baseline':
         model = LinearClassifier(input_size, num_classes, weights)
         data_module = ProteinDataModule(train_data, val_data, test_data, tokenizer, bow=True)
         
 
-    if fine_tune:
+    if model_name == 'esm2':
         data_module = ProteinDataModule(train_data, val_data, test_data, tokenizer, bow=False)
         model = TransformersLightningModule(model_name='facebook/esm2_t6_8M_UR50D', num_labels=len(label_encoder.classes_), class_weights=weights)
 
-    if custom:
+    if model_name == 'ropeformer':
         data_module = ProteinDataModule(train_data, val_data, test_data, tokenizer, bow=False)
         model = LinearClassifier(input_size, num_classes, weights)
 
@@ -57,9 +57,9 @@ def train(baseline=False, custom=False, fine_tune=True):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Preprocess protein data")
-    parser.add_argument("--data_file", type=str, required=True, help="Path to train CSV file")
+    parser = argparse.ArgumentParser(description="Train Protein Classifier")
+    parser.add_argument("--model_name", type=str, required=True, help="Path to train CSV file")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the preprocessed files")
     args = parser.parse_args()
 
-    preprocess_data(args.data_file, args.output_dir)
+    train(args.model_name)
