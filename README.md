@@ -61,19 +61,9 @@ In *src/models/*, *transformers_module.py* is a Lightning wrapper for the Huggin
 ### Available Models:
 * baseline: Linear Classifier
 * esm2: QLoRA fine-tuning of ESM-2-8M in 8-bit. *Targets only query/key/value layers and not dense layers to reduce compute load*.
-* ropeformer: My custom implementation of a Transformer with Rotary Position Embeddings
+* ropeformer: (Not fully implemented yet) My custom implementation of a Transformer with Rotary Position Embeddings
 
-Train the Linear Classifier:
+To train a model, go to the hydra config at *config/config.yaml*, and indicate the model you wish to train under model.name. Then, simply run the training script.
 ```bash
-python train.py --model_name baseline
-```
-
-Fine-tune ESM-2-8M in 8-bit:
-```bash
-python train.py --model_name esm2
-```
-
-Train the custom Transformer
-```bash
-python train.py --model_name ropeformer
+python train.py
 ```
