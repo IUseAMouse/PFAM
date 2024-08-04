@@ -1,0 +1,15 @@
+dataset:
+  train_path: "data/preprocessed/train.csv"
+  val_path: "data/preprocessed/dev.csv"
+  test_path: "data/preprocessed/test.csv"
+  class_weights_path: "data/preprocessed/class_weights.txt"
+
+train:
+  max_epochs: 3
+  batch_size: 20
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 3
+  logger: "wandb"
+
+model:
+  name: "baseline"  # Options: "baseline", "esm2"

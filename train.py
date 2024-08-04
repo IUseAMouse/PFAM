@@ -7,6 +7,9 @@ from sklearn.preprocessing import LabelEncoder
 import pytorch_lightning as pl
 from transformers import AutoTokenizer
 from lightning.pytorch.loggers import WandbLogger
+import hydra
+from hydra.utils import to_absolute_path
+from omegaconf import DictConfig
 
 from src.dataset import ProteinDataModule
 from src.models.linear_classifier import LinearClassifier
@@ -14,7 +17,8 @@ from src.models.transformers_module import TransformersLightningModule
 from src.models.ropeformer import TransformerEncoderRoPE
 
 
-def train(model_name: str):
+@hydra.main(config_path="config", config_name="config")
+def train(cfg: DictConfig):
     """
     Train a model for protein family classification based on the specified model name.
 
@@ -22,7 +26,9 @@ def train(model_name: str):
     model initialization, training loop, and evaluation. The available models are:
     - 'baseline': A simple linear classifier.
     - 'esm2': QLoRA fine-tuning of the ESM-2 8M model.
-    - 'ropeformer': A custom implementation of a Transformer with Rotary Position Embeddings (RoPE).
+
+    /!\ To implement :
+    - 'ropeformer': A custom implementation of a Transformer with Rotary Position Embeddings.
 
     Args:
         model_name (str): The name of the model to train. Must be one of 'baseline', 'esm2', or 'ropeformer'.
@@ -31,13 +37,12 @@ def train(model_name: str):
         ValueError: If an invalid model name is provided.
 
     Example:
-        >>> train('baseline')
-        This will train the baseline linear classifier model.
+        >>> python train.py --model_name baseline
     """
     # Load and preprocess the data
-    train_data = pd.read_csv('/content/drive/MyDrive/PFAM - Copie/data/preprocessed/train.csv')
-    test_data = pd.read_csv('/content/drive/MyDrive/PFAM - Copie/data/preprocessed/test.csv')
-    val_data = pd.read_csv('/content/drive/MyDrive/PFAM - Copie/data/preprocessed/dev.csv')
+    train_data = pd.read_csv(to_absolute_path(cfg.dataset.train_path))
+    test_data = pd.read_csv(to_absolute_path(cfg.dataset.test_path))
+    val_data = pd.read_csv(to_absolute_path(cfg.dataset.val_path))
 
     # Encode the labels
     label_encoder = LabelEncoder()
@@ -49,34 +54,31 @@ def train(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained('facebook/esm2_t6_8M_UR50D')
 
     # Load class weights
-    with open('data/preprocessed/class_weights.txt', 'r') as f:
+    with open(to_absolute_path(cfg.dataset.class_weights_path), 'r') as f:
         class_weights = {int(line.split(': ')[0]): float(line.split(': ')[1]) for line in f.readlines()}
     class_weights_ordered = OrderedDict(sorted(class_weights.items()))
     weights = torch.tensor([class_weights_ordered[i] for i in range(len(class_weights_ordered))], dtype=torch.float32)
 
     # Initialize the PyTorch Lightning trainer
-    logger = WandbLogger(project="PFAM")
+    logger = WandbLogger(project="PFAM") if cfg.train.logger == "wandb" else None
     trainer = pl.Trainer(
-        max_epochs=3,
+        max_epochs=cfg.train.max_epochs,
         accelerator='cuda',
-        gradient_clip_val=1.0, # Ensure gradient clipping to avoid exploding gradients
-        accumulate_grad_batches=3, # Accumulate grad for larger effective batch size
+        gradient_clip_val=cfg.train.gradient_clip_val, # Ensure gradient clipping to avoid exploding gradients
+        accumulate_grad_batches=cfg.train.accumulate_grad_batches, # Accumulate grad for larger effective batch size
         logger=logger
     )
 
     num_classes = len(label_encoder.classes_)
     aa_count = 25
 
-    if model_name == 'baseline':
-        data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=500, bow=True)
+    if cfg.model.name == 'baseline':
+        data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=cfg.train.batch_size, bow=True)
         input_size = aa_count
         model = LinearClassifier(input_size, num_classes, weights)   
-    elif model_name == 'esm2':
-        data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=6, bow=False)
+    elif cfg.model.name == 'esm2':
+        data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=cfg.train.batch_size)
         model = TransformersLightningModule(model_name='facebook/esm2_t6_8M_UR50D', num_labels=len(label_encoder.classes_), class_weights=weights)
-    elif model_name == 'ropeformer':
-        data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=50, bow=False)
-        model = TransformerEncoderRoPE(input_size=256, num_classes=num_classes, class_weights=weights)
     else:
         raise ValueError("Model name doesn't match with any available model")
 
@@ -89,11 +91,5 @@ def train(model_name: str):
 
 
 if __name__ == "__main__":
-    import argparse
     warnings.filterwarnings('ignore')
-
-    parser = argparse.ArgumentParser(description="Train Protein Classifier")
-    parser.add_argument("--model_name", type=str, required=True, help="Name of the target model")
-    args = parser.parse_args()
-
-    train(args.model_name)
+    train()
