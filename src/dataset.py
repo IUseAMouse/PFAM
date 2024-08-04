@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer
+from datasets import Dataset
 
 class ProteinDataModule(pl.LightningDataModule):
     def __init__(self, train_df, val_df, test_df, bow = False, batch_size=32, max_length=128):
