@@ -59,7 +59,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train Protein Classifier")
     parser.add_argument("--model_name", type=str, required=True, help="Path to train CSV file")
-    parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the preprocessed files")
     args = parser.parse_args()
 
     train(args.model_name)
