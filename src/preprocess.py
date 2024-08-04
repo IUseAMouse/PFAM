@@ -7,6 +7,13 @@ import joblib
 from collections import OrderedDict
 
 def preprocess_data(data_file, output_dir):
+    """
+    Preprocesses the protein data for model training and evaluation.
+
+    Parameters:
+    data_file (str): Path to the CSV file containing the raw protein data.
+    output_dir (str): Directory to save the preprocessed files.
+    """
     # Load the data
     print('Loading Data')
     data = pd.read_csv(data_file)
