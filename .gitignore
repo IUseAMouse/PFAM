@@ -4,4 +4,3 @@ env/
 .DS_Store
 .env
 .csv
-data/raw/*
