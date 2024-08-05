@@ -37,7 +37,7 @@ kaggle datasets download googleai/pfam-seed-random-split
 Move the contents of the dataset (train, dev, test, random_split) to the data/raw/ folder.
 
 ### Unpack the Data
-Unpack the data using the unpack_data.py script found in the build folder. 
+Unpack the data using the unpack_data.py script found in the build folder.
 ```bash
 python build/unpack_data.py --input_dir data/raw/ --output_file data/combined_data.csv
 ```
@@ -68,7 +68,6 @@ To train a model, go to the hydra config at *config/config.yaml*, and indicate t
 python train.py
 ```
 
-## 5. Next steps 
+## 5. Next steps
 
 * Automate project build with Makefile
-* Add pre-commit hooks for linter and pydantic
