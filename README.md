@@ -67,3 +67,8 @@ To train a model, go to the hydra config at *config/config.yaml*, and indicate t
 ```bash
 python train.py
 ```
+
+## 5. Next steps 
+
+* Automate project build with Makefile
+* Add pre-commit hooks for linter and pydantic
