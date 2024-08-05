@@ -1,67 +1,67 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from transformers import AutoTokenizer
 
-## Rotary Position Embeddings (RoPE) implementation
 
 def rotary_position_embeddings(dim, seq_len):
     """
     Generates rotary position embeddings.
-    
+
     Args:
         dim (int): The dimensionality of the embeddings.
         seq_len (int): The length of the sequence.
-        
+
     Returns:
         torch.Tensor: The rotary position embeddings with shape (1, seq_len, dim).
     """
     # Compute the inverse frequency for each dimension
     inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
-    
+
     # Create a tensor of shape (seq_len) containing the positions [0, 1, 2, ..., seq_len-1]
     t = torch.arange(seq_len, dtype=torch.float32)
-    
+
     # Compute the outer product of positions and inverse frequencies
     freqs = torch.einsum('i,j->ij', t, inv_freq)
-    
+
     # Concatenate frequencies with themselves along the last dimension to match the model dimension
     emb = torch.cat((freqs, freqs), dim=-1)
-    
+
     # Add batch and sequence dimensions
     return emb.unsqueeze(0)
+
 
 def apply_rotary_pos_emb(x, sincos):
     """
     Applies rotary position embeddings to input tensor.
-    
+
     Args:
         x (torch.Tensor): Input tensor of shape (batch_size, seq_len, dim).
         sincos (tuple): Tuple containing sin and cos tensors.
-        
+
     Returns:
         torch.Tensor: Tensor with applied rotary position embeddings.
     """
     sin, cos = sincos
-    
+
     # Apply the rotary position embeddings to the input tensor
     return (x * cos) + (rotate_half(x) * sin)
+
 
 def rotate_half(x):
     """
     Rotates half of the dimensions of the input tensor.
-    
+
     Args:
         x (torch.Tensor): Input tensor of shape (batch_size, seq_len, dim).
-        
+
     Returns:
         torch.Tensor: Tensor with rotated half dimensions.
     """
     # Split the tensor into two halves along the last dimension
     x1, x2 = x.chunk(2, dim=-1)
-    
+
     # Concatenate the rotated halves (second half negated and first half unchanged)
     return torch.cat((-x2, x1), dim=-1)
 
@@ -71,7 +71,7 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def __init__(self, input_size, num_classes, class_weights, max_len=256, embedding_dim=128, learning_rate=1e-3):
         """
         Initialize the Transformer Encoder with RoPE (Rotary Position Embeddings).
-        
+
         Args:
             input_size (int): Size of the input vocabulary.
             num_classes (int): Number of output classes.
@@ -95,27 +95,27 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def forward(self, x):
         """
         Forward pass through the model.
-        
+
         Args:
             x (torch.Tensor): Input tensor of shape (batch_size, seq_len).
-            
+
         Returns:
             torch.Tensor: Output tensor of shape (batch_size, num_classes).
         """
         # Embedding layer
         x = self.embedding(x)
         batch_size, seq_len, dim = x.size()
-        
+
         # Generate and apply rotary position embeddings
         rotary_emb = rotary_position_embeddings(self.embedding_dim, seq_len).to(x.device)  # Shape: [1, seq_len, dim]
         rotary_emb = rotary_emb.repeat(batch_size, 1, 1)  # Repeat for batch size: [batch_size, seq_len, dim]
         sincos = rotary_emb.sin(), rotary_emb.cos()
         sin, cos = sincos
         x = apply_rotary_pos_emb(x, (sin, cos))
-        
+
         # Pass through Transformer encoder
         x = self.transformer_encoder(x)
-        
+
         # Use the representation of the CLS token (first token) for classification
         x = x[:, 0, :]  # Shape: [batch_size, embedding_dim]
         x = self.fc(x)  # Shape: [batch_size, num_classes]
@@ -124,11 +124,11 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         """
         Training step for one batch.
-        
+
         Args:
             batch (tuple): A tuple containing input_ids and labels.
             batch_idx (int): Index of the batch.
-            
+
         Returns:
             torch.Tensor: Training loss.
         """
@@ -141,11 +141,11 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         """
         Validation step for one batch.
-        
+
         Args:
             batch (tuple): A tuple containing input_ids and labels.
             batch_idx (int): Index of the batch.
-            
+
         Returns:
             torch.Tensor: Validation loss.
         """
@@ -167,11 +167,11 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         """
         Test step for one batch.
-        
+
         Args:
             batch (tuple): A tuple containing sequences and labels.
             batch_idx (int): Index of the batch.
-            
+
         Returns:
             torch.Tensor: Test loss.
         """
@@ -193,7 +193,7 @@ class TransformerEncoderRoPE(pl.LightningModule):
     def configure_optimizers(self):
         """
         Configure the optimizer for the training process.
-        
+
         Returns:
             torch.optim.Optimizer: Optimizer used for training.
         """
@@ -205,9 +205,8 @@ class TransformerEncoderRoPE(pl.LightningModule):
         """
         # Clip gradients to prevent exploding gradients
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
-        
+
         # Log the gradient norms
         for name, param in self.named_parameters():
             if param.grad is not None:
                 self.log(f'grad_norm_{name}', param.grad.norm(2).item())
-

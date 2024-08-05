@@ -6,6 +6,7 @@ import tqdm
 import joblib
 from collections import OrderedDict
 
+
 def preprocess_data(data_file, output_dir):
     """
     Preprocesses the protein data for model training and evaluation.
@@ -37,10 +38,9 @@ def preprocess_data(data_file, output_dir):
     # Convert to numpy arrays for faster processing
     family_accession = data['family_accession'].values
     class_encoded = data['class_encoded'].values
-    sequences = data['sequence'].values
 
     unique_classes, class_counts = np.unique(family_accession, return_counts=True)
-    
+
     train_indices = []
     dev_indices = []
     test_indices = []
@@ -61,8 +61,18 @@ def preprocess_data(data_file, output_dir):
             dev_indices.extend(class_data_indices[1:2])
             test_indices.extend(class_data_indices[2:])
         else:
-            train_part, remaining = train_test_split(class_data_indices, test_size=2/3, random_state=42, stratify=class_encoded[class_data_indices])
-            dev_part, test_part = train_test_split(remaining, test_size=0.5, random_state=42, stratify=class_encoded[remaining])
+            train_part, remaining = train_test_split(
+                class_data_indices,
+                test_size=2/3,
+                random_state=42,
+                stratify=class_encoded[class_data_indices]
+            )
+            dev_part, test_part = train_test_split(
+                remaining,
+                test_size=0.5,
+                random_state=42,
+                stratify=class_encoded[remaining]
+            )
             train_indices.extend(train_part)
             dev_indices.extend(dev_part)
             test_indices.extend(test_part)
@@ -102,12 +112,13 @@ def preprocess_data(data_file, output_dir):
     # Create a full range of class weights with missing classes having weight 0
     max_class = max(class_counts.index)
     full_class_weights = {i: class_weights.get(i, 0.0) for i in range(max_class + 1)}
-    
+
     # Save the class weights
     class_weights_dict = OrderedDict(sorted(full_class_weights.items()))
     with open(f'{output_dir}/class_weights.txt', 'w') as f:
         for key, value in class_weights_dict.items():
             f.write(f"{key}: {value}\n")
+
 
 if __name__ == "__main__":
     import argparse

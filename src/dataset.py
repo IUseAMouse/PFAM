@@ -1,9 +1,9 @@
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader, Dataset
 from sklearn.feature_extraction.text import CountVectorizer
+
 
 class ProteinDataModule(pl.LightningDataModule):
     def __init__(self, train_df, val_df, test_df, bow=False, ropeformer=False, batch_size=32, max_length=128):
@@ -16,7 +16,7 @@ class ProteinDataModule(pl.LightningDataModule):
             test_df (pd.DataFrame): Test dataframe.
             bow (bool): If True, use Bag of Words encoding. Default is False.
             ropeformer (bool): If True, use RoPE embeddings. Default is False.
-            batch_size (int): Batch size for the data loaders. 
+            batch_size (int): Batch size for the data loaders.
             max_length (int): Maximum sequence length for tokenization.
         """
         super(ProteinDataModule, self).__init__()
@@ -75,8 +75,8 @@ class ProteinDataset(Dataset):
         Args:
             dataframe (pd.DataFrame): Dataframe containing sequences and labels.
             max_length (int): Maximum sequence length for tokenization.
-            bow (bool): If True, use Bag of Words encoding. 
-            ropeformer (bool): If True, use RoPE embeddings. 
+            bow (bool): If True, use Bag of Words encoding.
+            ropeformer (bool): If True, use RoPE embeddings.
         """
         self.data = dataframe
         self.max_length = max_length
@@ -104,25 +104,36 @@ class ProteinDataset(Dataset):
 
         Args:
             idx (int): Index of the sample.
-        
+
         Returns:
             dict or torch.Tensor: Tokenized input or Bag of Words vector.
             torch.Tensor: Label corresponding to the input.
         """
         sequence = self.data.iloc[idx]['sequence']
         label = self.data.iloc[idx]['class_encoded']
-        
+
         if self.bow:
             # If using Bag of Words encoding
             inputs = self.vectorizer.transform([sequence]).toarray()
             inputs = torch.tensor(inputs, dtype=torch.float32).squeeze()
         elif not self.bow and not self.ropeformer:
             # If using Huggingface Transformer PT Lightning wrapper
-            inputs = self.tokenizer(sequence, padding='max_length', truncation=True, max_length=self.max_length, return_tensors='pt')
+            inputs = self.tokenizer(
+                sequence,
+                padding='max_length',
+                truncation=True,
+                max_length=self.max_length,
+                return_tensors='pt'
+            )
             inputs = {key: val.squeeze() for key, val in inputs.items()}
         else:
             # If tokenizing without the wrapper for the RoPE transformer
-            inputs = self.tokenizer(sequence, padding='max_length', truncation=True, max_length=self.max_length, return_tensors='pt')
-        
-        return inputs, torch.tensor(label, dtype=torch.long)
+            inputs = self.tokenizer(
+                sequence,
+                padding='max_length',
+                truncation=True,
+                max_length=self.max_length,
+                return_tensors='pt'
+            )
 
+        return inputs, torch.tensor(label, dtype=torch.long)

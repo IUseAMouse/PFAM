@@ -1,8 +1,8 @@
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
 
 class LinearClassifier(pl.LightningModule):
     def __init__(self, input_size, num_classes, class_weights):
@@ -24,7 +24,7 @@ class LinearClassifier(pl.LightningModule):
 
         Args:
             x (torch.Tensor): Input tensor containing features.
-        
+
         Returns:
             torch.Tensor: Output logits from the linear layer.
         """
@@ -38,7 +38,7 @@ class LinearClassifier(pl.LightningModule):
         Args:
             batch (tuple): A tuple containing sequences and labels.
             batch_idx (int): Index of the batch.
-        
+
         Returns:
             torch.Tensor: Training loss.
         """
@@ -55,7 +55,7 @@ class LinearClassifier(pl.LightningModule):
         Args:
             batch (tuple): A tuple containing sequences and labels.
             batch_idx (int): Index of the batch.
-        
+
         Returns:
             torch.Tensor: Test loss.
         """
@@ -81,7 +81,7 @@ class LinearClassifier(pl.LightningModule):
         Args:
             batch (tuple): A tuple containing sequences and labels.
             batch_idx (int): Index of the batch.
-        
+
         Returns:
             torch.Tensor: Validation loss.
         """
@@ -103,7 +103,7 @@ class LinearClassifier(pl.LightningModule):
     def configure_optimizers(self):
         """
         Configure the optimizer for the training process.
-        
+
         Returns:
             torch.optim.Optimizer: Optimizer used for training.
         """
@@ -115,7 +115,7 @@ class LinearClassifier(pl.LightningModule):
         """
         # Clip gradients to prevent exploding gradients
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
-        
+
         # Log the gradient norms
         for name, param in self.named_parameters():
             if param.grad is not None:

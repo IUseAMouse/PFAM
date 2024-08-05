@@ -5,7 +5,6 @@ import torch
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 import pytorch_lightning as pl
-from transformers import AutoTokenizer
 from lightning.pytorch.loggers import WandbLogger
 import hydra
 from hydra.utils import to_absolute_path
@@ -14,7 +13,7 @@ from omegaconf import DictConfig
 from src.dataset import ProteinDataModule
 from src.models.linear_classifier import LinearClassifier
 from src.models.transformers_module import TransformersLightningModule
-from src.models.ropeformer import TransformerEncoderRoPE
+# from src.models.ropeformer import TransformerEncoderRoPE
 
 
 @hydra.main(config_path="config", config_name="config")
@@ -27,7 +26,7 @@ def train(cfg: DictConfig):
     - 'baseline': A simple linear classifier.
     - 'esm2': QLoRA fine-tuning of the ESM-2 8M model.
 
-    /!\ To implement :
+    To implement :
     - 'ropeformer': A custom implementation of a Transformer with Rotary Position Embeddings.
 
     Args:
@@ -50,9 +49,6 @@ def train(cfg: DictConfig):
     train_data['class_encoded'] = label_encoder.transform(train_data['class_encoded'])
     val_data['class_encoded'] = label_encoder.transform(val_data['class_encoded'])
 
-    # Define the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained('facebook/esm2_t6_8M_UR50D')
-
     # Load class weights
     with open(to_absolute_path(cfg.dataset.class_weights_path), 'r') as f:
         class_weights = {int(line.split(': ')[0]): float(line.split(': ')[1]) for line in f.readlines()}
@@ -64,8 +60,8 @@ def train(cfg: DictConfig):
     trainer = pl.Trainer(
         max_epochs=cfg.train.max_epochs,
         accelerator='cuda',
-        gradient_clip_val=cfg.train.gradient_clip_val, # Ensure gradient clipping to avoid exploding gradients
-        accumulate_grad_batches=cfg.train.accumulate_grad_batches, # Accumulate grad for larger effective batch size
+        gradient_clip_val=cfg.train.gradient_clip_val,  # Ensure gradient clipping to avoid exploding gradients
+        accumulate_grad_batches=cfg.train.accumulate_grad_batches,  # Accumulate grad for larger effective batch size
         logger=logger
     )
 
@@ -75,19 +71,22 @@ def train(cfg: DictConfig):
     if cfg.model.name == 'baseline':
         data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=cfg.train.batch_size, bow=True)
         input_size = aa_count
-        model = LinearClassifier(input_size, num_classes, weights)   
+        model = LinearClassifier(input_size, num_classes, weights)
     elif cfg.model.name == 'esm2':
         data_module = ProteinDataModule(train_data, val_data, test_data, batch_size=cfg.train.batch_size)
-        model = TransformersLightningModule(model_name='facebook/esm2_t6_8M_UR50D', num_labels=len(label_encoder.classes_), class_weights=weights)
+        model = TransformersLightningModule(
+            model_name='facebook/esm2_t6_8M_UR50D',
+            num_labels=len(label_encoder.classes_),
+            class_weights=weights
+        )
     else:
         raise ValueError("Model name doesn't match with any available model")
 
     trainer.fit(
-      model=model, 
+      model=model,
       datamodule=data_module
     )
     trainer.test(datamodule=data_module)
-    
 
 
 if __name__ == "__main__":

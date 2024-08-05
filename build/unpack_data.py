@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+
 def unpack_data(input_dir, output_file):
     """
     Unpacks and combines multiple CSV files from a directory into a single CSV file.
@@ -13,7 +14,10 @@ def unpack_data(input_dir, output_file):
     for file_name in os.listdir(input_dir):
         if file_name.endswith('.csv') or 'data-' in file_name:
             file_path = os.path.join(input_dir, file_name)
-            data = pd.read_csv(file_path, names=['sequence', 'family_accession', 'sequence_name', 'aligned_sequence', 'family_id'])
+            data = pd.read_csv(
+                file_path,
+                names=['sequence', 'family_accession', 'sequence_name', 'aligned_sequence', 'family_id']
+            )
             data_frames.append(data)
     combined_data = pd.concat(data_frames, ignore_index=True)
     combined_data.to_csv(output_file, index=False)
